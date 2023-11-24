@@ -33,7 +33,7 @@ services:
 
 這類數據與環境變量有何不同？ 很簡單，因為從一個環境到另一個環境，用於發送自動郵件的管理電子郵件不會改變。 這是應用程式的數據，而不是執行環境的數據。
 
-它會隨應用程式的環境而改變嗎？ 那就將其設為環境變數 😄 。
+它會隨應用程式的環境而改變嗎？ 那就將其設為環境變量 😄 。
 
 :::
 
@@ -69,8 +69,23 @@ App\Mail\NewsletterSubscribed:
 
 ## 自動配置所有服務
 
-手動配置服很有趣，但將此變量作為應用程式參數傳遞的最初目的是為了能在所有需要它的服務（現在或將來）中使用它。
+手動配置服務很有趣，但將此變量作為應用程式參數傳遞的最初目的是為了能在所有需要它的服務（現在或將來）中使用它。
 
-這樣，我們就能盡量避免每次建立要傳送電子郵件的服務時，都必須手動設定該服務才能使用 app.admin_email 變數的情況...
+這樣，我們就能盡量避免每次建立要傳送電子郵件的服務時，都必須手動設定該服務才能使用 `app.admin_email` 變量的情況...
 
-您也可以配置容器，使其自動將服務中的建構函式參數綁定到某個值：
+我們也可以配置容器，使其自動將服務中的建構函式參數*綁定*(bind)到某個值：
+
+```yaml
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+        bind:
+            string $adminEmail: "%app.admin_email%"
+```
+
+:::note 參數類型
+注意，我們新增了 `string` 字串類型，這是為了在定義與參數關聯的值時更加精確。
+:::
+現在，任何在其建構函式中宣告字串參數 `$adminEmail` 的服務都會自動注入位於 `app.admin_email` 中的值。
