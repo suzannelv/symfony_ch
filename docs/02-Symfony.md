@@ -16,7 +16,7 @@ Symfony 也採用 `semver` 版本控制系統，每兩年發布新的主要版�
 
 ## 安裝 Symfony 5.4 LTS
 
-要 安裝 Symfony 5.4 版本專案 ，即 LTS，我們將使用 [Symfony 二進位版本](https://symfony.com/download)（或 Symfony CLI）：
+要安裝 Symfony 5.4 版本專案 ，即 LTS，我們將使用 [Symfony 二進位版本](https://symfony.com/download)（或 Symfony CLI）：
 
 ```bash
 symfony new my_project_directory --version=5.4 --webapp

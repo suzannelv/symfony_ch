@@ -18,7 +18,7 @@ Doctrine ORM 可以在 Symfony 應用程式之外使用。 我們將在控制台
 
 ## 配置
 
-我們將使用 `DATABASE_URL` 變數在環境變數檔案中輸入資料庫存取詳情
+我們將使用 `DATABASE_URL` 變量在環境變量檔案中輸入資料庫存取詳情
 
 :::caution .env / .env.local 文件
 在更新資料庫之前，必須在 .env.local 檔案中輸入資料庫存取 URL，該檔案不包含在版本管理器（[文檔](https://symfony.com/doc/5.4/doctrine.html#configuring-the-database)）中。
