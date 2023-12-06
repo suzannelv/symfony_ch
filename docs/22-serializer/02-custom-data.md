@@ -1,6 +1,6 @@
-# 自訂傳回的數據
+# 自訂(自定義)傳回的數據
 
-當將資料傳送到客戶端時，添加額外資訊可能是有用的。
+當將資料傳送到客戶端時，添加額外資訊是有用的。
 
 例如，當我們以 JSON 格式發送我們的文章時，我們希望添加一個指向 Normalizer 的鏈接。 這是因為需要我們文章的外部服務也希望在我們的網站上建立一個指向原始文章的鏈接。
 
@@ -12,17 +12,17 @@
 
 ![normalizer](../assets/img/normaliser.png)
 
-因此，我們要建立一個自訂 Normalizer 器，它將定義 Normalizer 在 陣列中的表現形式。
+因此，我們要建立一個自訂 Normalizer 器，它將定義 Normalizer 在陣列中的表現形式。
 
 ## 建立標準化器
 
-我們可以使用製作工具來建立標準化器：
+我們可以使用 maker 工具來建立標準化器：
 
 ```bash
 php bin/console make:serializer:normalizer
 ```
 
-如果我們將其命名為 `ArticleNormalize`r，那麼 maker 將在 `src/Serializer` 資料夾中建立一個新類別：
+如果我們將其命名為 `ArticleNormalizer`，那麼 maker 將在 `src/Serializer` 資料夾中建立一個新類別：
 
 ```php
 <?php

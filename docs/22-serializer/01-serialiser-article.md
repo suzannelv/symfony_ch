@@ -4,13 +4,13 @@
 
 因此，在以 API 模式建立新的應用程式之前，我們可以使用序列化器測試文章。
 
-這種情況非常現實：除了新聞網站之外，你還可以決定為外部客戶端提供一個端點來檢索文章，但不是透過網頁，而是以 JSON 格式的原始輸出。
+這種情況非常常見：除了新聞網站之外，你還可以決定為外部客戶端提供一個端點來檢索文章，但不是透過網頁，而是以 JSON 格式的原始輸出。
 
 ## 新控制器
 
 因此，我們使用 maker 命令 `make:controller` 在應用程式中建立一個新的控制器類別。
 
-對於類別名，如果在 `src/Controller` 資料夾中已經有一個 `ArticleController`，則可以指定 `Api\ArticleController`。 有了 `PSR-4`，maker 就會知道在哪裡建立新的控制器類，即在 `src/Controller/Api/ArticleController.php` 中。
+對於類別名，如果在 `src/Controller` 資料夾中已經有一個 `ArticleController`，我們則可以指定 `Api\ArticleController`。 有了 `PSR-4`，maker 就會知道在哪裡建立新的控制器類，即在 `src/Controller/Api/ArticleController.php` 中。
 
 ## 以 JSON 格式發送回應
 
@@ -38,9 +38,9 @@ public function index(ArticleRepository $articleRepository): Response
 
 要控制序列化，我們需要考慮要傳回的資料格式。
 
-在 JSON 中，我希望傳回一個文章數組，包括每個文章的類別，以避免第二次要求資訊。 例如 ：
+在 JSON 中，我希望傳回一個文章數組，包括每個文章的類別，以避免第二次請求資訊。 例如 ：
 
-```json
+```php
 #[Route('/api/articles', name: 'app_api_articles')]
 public function index(ArticleRepository $articleRepository): Response
 {
@@ -72,7 +72,7 @@ private ?Category $category = null;
 
 :::note 組名稱
 
-群組的名稱完全由使用者自行決定，但通常我們會先標示實體名稱（或 API 中的資源名稱），然後標示相關操作，中間用冒號 `:` 分隔。
+群組的名稱完全由使用者自行決定，但通常我們會先標識實體名稱（或 API 中的資源名稱），然後標識相關操作，中間用冒號 `:` 分隔。
 
 例如，可以使用 `articles:read`、`article:read` 或 `articles:item:read`。
 :::
@@ -121,7 +121,7 @@ public function index(ArticleRepository $articleRepository): Response
 ```
 
 :::info `groups` (群組)
-實際上，我們可以看到該選項的名稱是 `groups`：我們可以使用陣列向其指明多個群組
+實際上，我們看到該選項的名稱是 `groups`：我們可以使用陣列向其指明多個群組
 :::
 
 如果我們使用 **Postman** 這樣的客戶端來測試我們的端點，結果會是這樣的：
@@ -188,9 +188,9 @@ public function index(ArticleRepository $articleRepository): Response
 
 ### 直接在屬性上
 
-如果我們想要避免重複，我們也可以一次定義我們希望在序列化器以 JSON 發送的文章中看到的格式。 。
+如果想要避免重複，我們也可以一次定義我們希望在序列化器以 JSON 發送的文章中看到的格式。 。
 
-為此，讓我們從來源開始：在 `date_created` 屬性上，我們可以使用 PHP8 的上下文（`Contex`t）屬性來指定參數：
+為此，讓我們從來源開始：在 `date_created` 屬性上，我們可以使用 PHP8 的上下文（`Context`）屬性來指定參數：
 
 ```php
 #[ORM\Column(type: Types::DATE_MUTABLE)]
