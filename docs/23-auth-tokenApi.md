@@ -138,3 +138,173 @@ class ApiTokenAuthenticator extends AbstractAuthenticator
   //...
 }
 ```
+
+如果我們的 `supports` 方法回傳 `true`，安全元件將會呼叫 `authenticate` 方法。 否則，它將繼續到先前註冊的下一個 Authenticator。
+
+### `authenticate`方法
+
+這是主要方法，我們接收傳入的請求，並使用它來建置並傳回一個 `Passport`。
+
+我們將從請求頭中提取令牌（同樣，我們可以檢查它是否存在），然後建立一個 `SelfValidatingPassport` 。
+
+```php
+public function authenticate(Request $request): Passport
+{
+  $token = $request->headers->get(self::TOKEN_NAME);
+
+  if ($token === null) {
+    throw new CustomUserMessageAuthenticationException('No token provided');
+  }
+
+  return new SelfValidatingPassport(new UserBadge($token));
+}
+```
+
+讓我們深入了解 `Passport`：
+
+-   我們使用 `SelfValidatingPassport` 而不是傳統的 `Passport`，因為傳統的 `Passport` 通常期望`Credentials` 憑證（例如密碼）以及 `UserBadge`。 在我們的情況下，我們沒有密碼：偵測和檢索令牌就可以授權請求。 因此，`SelfValidatingPassport` 可用於在沒有任何憑證的情況下傳遞 `UserBadge`。
+
+-   `UserBadge` 需要一個**使用者標識符**，這裡是我們的令牌。 這就是為什麼我們在建立安全類別時將 `token` 列指定為識別欄位的原因：**這是用於找回使用者的資料**。
+
+-   `UserBadge` 也可以選擇接收一個匿名方法，用於查詢與識別碼關聯的使用者。 在這裡，我們沒有提供這個可選參數，因為在建立安全類別時，我們也新增了一個用於我們的令牌的提供者 provider。 這就是我們在防火牆配置中指定的提供者 provider。
+
+-   因此，`UserBadge` 將負責使用適當的提供者找回使用者。 一般來說，`UserBadge` 將嘗試建立實作 `UserInterface` 的類別的實例。 這就是為什麼我們創建安全類別的原因：`ApiToken` 類別實作了 `UserInterface`。
+
+### `onAuthenticationSuccess`
+
+這個方法告訴安全元件在驗證成功時應該執行什麼操作。
+
+我們將返回 `null`，這意味著我們**可以讓請求繼續發送到控制器**：
+
+```php
+public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
+{
+  return null;
+}
+```
+
+:::note TOKENINTERFACE(令牌介面)
+實作 `TokenInterface` 的物件實例可用於檢索已通過身份驗證的用戶
+:::
+
+### `onAuthenticationFailure`
+
+另一方面，如果身份驗證失敗（令牌不正確），我們希望傳回 JSON 格式的回應，其中包含錯誤訊息和相應的回應代碼：
+
+```php
+public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
+{
+  return new JsonResponse(
+    ['message' => 'Unable to authenticate'],
+    Response::HTTP_UNAUTHORIZED
+  );
+}
+```
+
+### `security.yaml` 配置
+
+最後，在安全元件的設定檔中，由於我們在建立驗證器時選擇了 `api` 防火牆，我們可以看到它已經正確配置：
+
+```yaml
+api:
+    pattern: /api/articles
+    provider: api_token_provider
+    custom_authenticator: App\Security\ApiTokenAuthenticator
+```
+
+## 存取控制
+
+如果我們重新啟動伺服器，在這個階段，我們應該能夠從像 Postman 這樣的客戶端發出請求而不會出現錯誤。
+
+但無論是否輸入令牌，請求都能正常運作 🤔
+
+最令我們困擾的是，**當我們不提供任何令牌時**，請求仍然有效。
+
+事實上，讓我們回想一下 `Authenticators` 的工作原理：安全元件首先透過 `supports` 方法詢問不同的 authenticators，以確定是否呼叫它們的 `authenticate` 方法。
+
+但是如果我們沒有提供任何令牌，那麼我們的 `ApiTokenAuthenticator` 就簡單地表示它**不支援**身份驗證。
+
+因此，如果在請求的標頭中沒有提供任何令牌，我們的 authenticator 甚至不會被執行。
+
+仔細想想，這就說得通了：如果沒有 `X-API-TOKEN` 標頭，那可能與我們的 `api` 防火牆無關，因此我們的 `ApiTokenAuthenticator` 甚至不會執行...
+
+因此，我們需要在 `/api/articles` URL 上設定**存取控制**，以便在該 URL 上強制進行身份驗證。
+
+### 防火牆順序
+
+防火牆的順序也很重要：當安全元件確定接受請求的防火牆時，它就**不再繼續尋找**。
+
+在我們的例子中，我們有 3 個防火牆：
+
+-   `dev` 用於 profiler、Web 偵錯工具列和資源相關的所有內容
+-   `api` 用於我們的 `/api/articles` 端點
+-   `main` 用於應用程式的其餘部分
+
+因此，如前所述，如果我們沒有 `X-API-TOKEN` 標頭，安全元件會忽略 `api` 防火牆並前往 `main`。 而 `main` 從 `AbstractLoginFormAuthenticator` 抽象類別繼承了其 `supports` 方法:
+
+```php
+public function supports(Request $request): bool
+{
+    return $request->isMethod('POST') && $this->getLoginUrl($request) === $request->getBaseUrl().$request->getPathInfo();
+}
+```
+
+由於它不支援身份驗證，因此也允許請求通過！ 這就是為什麼我們甚至不需要提供 `X-API-TOKEN` 標題就能以 JSON 格式顯示文章的原因。
+
+![pare-feu](assets/img/firewall.png)
+
+因此，如果我們不為 /api/articles URL 提供 API 令牌，就會退回到全域存取控制：
+
+> config/packages/security.yaml
+
+```yaml
+#...
+access_control:
+    - { path: /api/articles, roles: IS_AUTHENTICATED_FULLY }
+```
+
+:::note `IsGranted` 屬性
+我們也可以使用 SensioFrameworkExtraBundle 中的 `IsGranted` 屬性，直接在控制器上定義存取控制：
+
+```php
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+
+//...
+
+#[Route('/api/articles', name: 'app_api_article')]
+#[IsGranted('IS_AUTHENTICATED_FULLY')]
+public function index(ArticleRepository $articleRepository): Response
+{
+  $articles = $articleRepository->findAll();
+  return $this->json($articles, context: ['groups' => 'articles:read']);
+}
+```
+
+:::
+
+如果我們嘗試在不提供令牌的情況下存取 `/api/articles`，將收到 `401 Unathorized` (未授權)錯誤。
+
+## 有狀態？ 無狀態？
+
+如果提供有效令牌，則請求正常工作，我們就可以存取 JSON 格式的文章清單。
+
+但如果我們在沒有令牌的情況下再次嘗試，我們仍然可以存取資源...
+
+這不符合我們想要的功能：我們希望**在每個請求中提取和標識我們的令牌**。
+
+為此，我們必須切換到**無狀態**模式，因為目前，如果我們能夠使用有效的令牌執行請求，則會**啟動一個 PHP 會話**。
+
+為確保每次請求都能正確驗證，我們將把 `api` 防火牆切換為無狀態模式。
+
+```yaml
+firewalls:
+    dev:
+        pattern: ^/(_(profiler|wdt)|css|images|js)/
+        security: false
+    api:
+        pattern: /api/articles
+        stateless: true
+        provider: api_token_provider
+        custom_authenticator: App\Security\ApiTokenAuthenticator
+    #...
+```
